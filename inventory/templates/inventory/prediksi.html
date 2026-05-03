@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediksi Stok - BVentory</title>
+    <meta name="color-scheme" content="light">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Setup Dark Mode
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb', // blue-600
+                        primary_hover: '#1d4ed8', // blue-700
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            backdrop-filter: blur(8px);
+        }
+
+        .card {
+            border-radius: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d4d4d8;
+            border-radius: 0.5rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .dark .input-field {
+            background-color: #27272a;
+            border-color: #3f3f46;
+            color: #f4f4f5;
+        }
+
+        .input-field:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+
+        .satuan-tag {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #71717a;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+
+<body class="bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
+
+    <header
+        class="sticky-header px-6 py-4 mb-10 bg-white/80 dark:bg-zinc-900/80 border-b border-zinc-200 dark:border-zinc-800">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight hidden sm:block">BVentory</h1>
+            </a>
+            <div class="flex items-center gap-4">
+                <nav class="flex gap-4 sm:gap-6 mr-2">
+                    <a href="/"
+                        class="text-sm font-medium text-zinc-500 hover:text-primary dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors">Beranda</a>
+                    <a href="{% url 'halaman_gudang' %}"
+                        class="text-sm font-medium text-zinc-500 hover:text-primary dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors">Gudang
+                        Stok</a>
+                </nav>
+                <button onclick="toggleDarkMode()"
+                    class="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors">
+                    <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                        </path>
+                    </svg>
+                    <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                        </path>
+                    </svg>
+                </button>
+                <button onclick="toggleSidebar()"
+                    class="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 pb-20">
+        <div class="mb-10">
+            <h2 class="text-2xl font-semibold mb-1">Prediksi Stok AI</h2>
+            <p class="text-zinc-500 dark:text-zinc-400 text-sm">Estimasi kebutuhan bahan baku berdasarkan target harian.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <!-- Kiri: Kalkulator Prediksi -->
+            <div class="space-y-8">
+                <div class="card p-8 bg-primary text-white shadow-lg border border-primary_hover">
+                    <h3 class="text-xl font-semibold mb-6">Target Hari Ini</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-blue-100 uppercase mb-2">Target
+                                Antrian</label>
+                            <input type="number" id="target_antrian"
+                                class="w-full bg-blue-700/50 border border-blue-400/30 rounded-lg px-4 py-2.5 text-white placeholder-blue-300 outline-none focus:bg-blue-700 transition-all text-sm"
+                                placeholder="Contoh: 300">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-blue-100 uppercase mb-2">Target Omset</label>
+                            <input type="number" id="target_omset"
+                                class="w-full bg-blue-700/50 border border-blue-400/30 rounded-lg px-4 py-2.5 text-white placeholder-blue-300 outline-none focus:bg-blue-700 transition-all text-sm"
+                                placeholder="Opsional">
+                        </div>
+                    </div>
+                    <button onclick="hitungPrediksi()"
+                        class="w-full mt-6 bg-white text-primary font-semibold py-2.5 rounded-lg hover:bg-zinc-50 transition-colors">Hitung
+                        Estimasi</button>
+                </div>
+
+                <!-- Hasil Prediksi -->
+                <div id="hasil-prediksi-container"
+                    class="card p-8 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hidden">
+                    <h3 class="text-lg font-semibold mb-6 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Hasil Estimasi Kebutuhan
+                    </h3>
+                    <div id="container-bahan" class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
+                        <!-- JS akan mengisi ini -->
+                    </div>
+                    <button onclick="eksekusiPotongStok()"
+                        class="w-full py-3 bg-zinc-900 dark:bg-zinc-700 text-white font-medium rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-600 transition-all flex items-center justify-center gap-2 text-sm">
+                        <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V7"></path>
+                        </svg>
+                        Jalankan Pemotongan Stok
+                    </button>
+                </div>
+            </div>
+
+            <!-- Kanan: Input Data Latih -->
+            <div class="card p-8 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                <h3 class="text-lg font-semibold mb-6">Input Data Latih (Akurasi AI)</h3>
+                <form onsubmit="simpanHistoris(event)" class="space-y-4">
+                    {% csrf_token %}
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="number" name="jumlah_antrian" placeholder="Antrian" class="input-field text-sm"
+                            required>
+                        <input type="number" name="omset" placeholder="Omset (Rp)" class="input-field text-sm" required>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div><label
+                                class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Deeproast
+                                (gr)</label><input type="number" name="deeproast" class="input-field text-xs py-1.5"
+                                required></div>
+                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">4
+                                Season (gr)</label><input type="number" name="four_season"
+                                class="input-field text-xs py-1.5" required></div>
+                        <div><label
+                                class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Jasmine
+                                (gr)</label><input type="number" name="jasmine" class="input-field text-xs py-1.5"
+                                required></div>
+                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Boba
+                                (gr)</label><input type="number" name="boba" class="input-field text-xs py-1.5"
+                                required></div>
+                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Cup
+                                Besar</label><input type="number" name="paper_cup_besar"
+                                class="input-field text-xs py-1.5" required></div>
+                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Cup
+                                Kecil</label><input type="number" name="paper_cup_kecil"
+                                class="input-field text-xs py-1.5" required></div>
+                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Gula
+                                Pasir (gr)</label><input type="number" name="gula" class="input-field text-xs py-1.5"
+                                required></div>
+                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Gula
+                                Cair (ml)</label><input type="number" name="gula_cair"
+                                class="input-field text-xs py-1.5" required></div>
+                        <div><label
+                                class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Creamer
+                                (kg)</label><input type="number" step="0.01" name="creamer"
+                                class="input-field text-xs py-1.5" required></div>
+                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Honey
+                                (btl)</label><input type="number" step="0.01" name="honey_syrup"
+                                class="input-field text-xs py-1.5" required></div>
+                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Konjac
+                                (pck)</label><input type="number" step="0.01" name="konjac_jelly"
+                                class="input-field text-xs py-1.5" required></div>
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium py-2.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors text-sm">Simpan
+                        Data Latih</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Sidebar Saran & Feedback -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()"
+        class="fixed inset-0 bg-zinc-900/50 backdrop-blur-sm z-40 hidden transition-opacity"></div>
+    <div id="sidebar"
+        class="fixed inset-y-0 right-0 w-80 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col">
+        <div class="p-6 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+            <h2 class="text-lg font-semibold">Saran & Feedback</h2>
+            <button onclick="toggleSidebar()"
+                class="p-2 -mr-2 text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 flex-1 overflow-y-auto">
+            <form action="mailto:tubagussains07@gmail.com" method="post" enctype="text/plain" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Nama Anda</label>
+                    <input type="text" name="name"
+                        class="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow text-sm"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Pesan / Saran</label>
+                    <textarea name="body" rows="5"
+                        class="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow text-sm"
+                        required></textarea>
+                </div>
+                <button type="submit"
+                    class="w-full bg-primary hover:bg-primary_hover text-white font-medium py-2.5 rounded-lg transition-colors text-sm">
+                    Kirim via Email
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const labelMap = {
+            deeproast: 'Deeproast Oolong', four_season: 'Four Season', jasmine: 'Jasmine Tea',
+            boba: 'Boba', paper_cup_besar: 'Cup Besar', paper_cup_kecil: 'Cup Kecil',
+            gula: 'Gula Pasir', gula_cair: 'Gula Cair', honey_syrup: 'Honey Syrup',
+            konjac_jelly: 'Konjac Jelly', creamer: 'Creamer'
+        };
+        const satuanMap = {
+            deeproast: 'gr', four_season: 'gr', jasmine: 'gr', boba: 'gr',
+            paper_cup_besar: 'pcs', paper_cup_kecil: 'pcs', gula: 'gr',
+            gula_cair: 'ml', honey_syrup: 'botol', konjac_jelly: 'pack', creamer: 'kg'
+        };
+
+        function hitungPrediksi() {
+            const antrian = document.getElementById('target_antrian').value;
+            const omset = document.getElementById('target_omset').value;
+
+            if (!antrian || antrian <= 0) {
+                alert("Masukkan target antrian!");
+                return;
+            }
+
+            fetch(`/prediksi/api/?antrian=${antrian}&omset=${omset}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'sukses') {
+                        const container = document.getElementById('container-bahan');
+                        container.innerHTML = '';
+
+                        Object.entries(data.prediksi).forEach(([key, val]) => {
+                            const card = document.createElement('div');
+                            card.className = 'p-3 bg-zinc-50 dark:bg-zinc-700/50 border border-zinc-200 dark:border-zinc-600 rounded-xl flex flex-col items-center text-center';
+                            card.innerHTML = `
+                                <span class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">${labelMap[key] || key}</span>
+                                <span class="text-lg font-bold text-primary">${val}</span>
+                                <span class="satuan-tag">${satuanMap[key] || ''}</span>
+                            `;
+                            container.appendChild(card);
+                        });
+
+                        document.getElementById('hasil-prediksi-container').classList.remove('hidden');
+                    } else {
+                        alert(data.pesan);
+                    }
+                });
+        }
+
+        function eksekusiPotongStok() {
+            const antrian = document.getElementById('target_antrian').value;
+            if (!confirm(`Konfirmasi: Jalankan pemotongan stok untuk ${antrian} antrian?`)) return;
+
+            const formData = new FormData();
+            formData.append('antrian', antrian);
+
+            fetch('/prediksi/terapkan/', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'sukses') {
+                        alert("Berhasil! Stok gudang telah diperbarui.");
+                        window.location.href = '/';
+                    } else {
+                        alert(data.pesan);
+                    }
+                });
+        }
+
+        function simpanHistoris(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+
+            fetch('/prediksi/simpan/', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'sukses') {
+                        alert("Data latih berhasil disimpan.");
+                        location.reload();
+                    } else {
+                        alert(data.pesan);
+                    }
+                });
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('translate-x-full');
+            document.getElementById('sidebar-overlay').classList.toggle('hidden');
+        }
+
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+    </script>
+</body>
+
+</html>

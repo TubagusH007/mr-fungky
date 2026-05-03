@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gudang Stok - BVentory</title>
+    <meta name="color-scheme" content="light">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Setup Dark Mode
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb', // blue-600
+                        primary_hover: '#1d4ed8', // blue-700
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            backdrop-filter: blur(8px);
+        }
+
+        .card {
+            border-radius: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-voice {
+            background: #2563eb;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-voice:hover {
+            background: #1d4ed8;
+        }
+
+        .mic-active {
+            background: #ef4444 !important;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
+
+    <header
+        class="sticky-header px-6 py-4 mb-8 bg-white/80 dark:bg-zinc-900/80 border-b border-zinc-200 dark:border-zinc-800">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight hidden sm:block">BVentory</h1>
+            </a>
+            <div class="flex items-center gap-4">
+                <nav class="flex gap-4 sm:gap-6 mr-2">
+                    <a href="/"
+                        class="text-sm font-medium text-zinc-500 hover:text-primary dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors">Beranda</a>
+                    <a href="{% url 'halaman_prediksi' %}"
+                        class="text-sm font-medium text-zinc-500 hover:text-primary dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors">Prediksi
+                        AI</a>
+                </nav>
+                <button onclick="toggleDarkMode()"
+                    class="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors">
+                    <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                        </path>
+                    </svg>
+                    <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                        </path>
+                    </svg>
+                </button>
+                <button onclick="toggleSidebar()"
+                    class="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+
+
+    <main class="max-w-7xl mx-auto px-6 pb-20">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+            <div class="flex flex-col gap-2">
+                <h2 class="text-2xl font-semibold">Gudang Stok</h2>
+                <div class="flex items-center gap-3">
+                    <p class="text-zinc-500 dark:text-zinc-400 text-sm">Kelola ketersediaan bahan baku dengan suara atau manual.</p>
+                    <a href="{% url 'download_excel_stok' %}" class="flex items-center gap-1.5 text-xs font-bold text-green-600 hover:text-green-700 bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-lg border border-green-200 dark:border-green-800 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Download Excel
+                    </a>
+                </div>
+            </div>
+
+            <!-- Voice Update Section -->
+            <div class="flex flex-col items-end gap-2">
+                <button id="mic-btn" onclick="toggleRecognition()" class="btn-voice shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-10a3 3 0 00-3 3v2a3 3 0 006 0v-2a3 3 0 00-3-3z">
+                        </path>
+                    </svg>
+                    <span>Update Suara</span>
+                </button>
+                <p id="mic-status" class="text-xs font-medium text-zinc-500 dark:text-zinc-400 h-4"></p>
+            </div>
+        </div>
+
+        <!-- Tabel Stok -->
+        <div class="card overflow-hidden bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+            <table class="w-full text-left">
+                <thead>
+                    <tr
+                        class="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-700">
+                        <th class="px-6 py-4 font-semibold">Nama Bahan</th>
+                        <th class="px-6 py-4 font-semibold">Zona</th>
+                        <th class="px-6 py-4 font-semibold">Stok Sekarang</th>
+                        <th class="px-6 py-4 font-semibold text-center">Aksi Manual</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                    {% for bahan in semua_bahan %}
+                    <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="font-medium text-zinc-900 dark:text-zinc-100">{{ bahan.nama_bahan }}</div>
+                            <div class="text-xs text-zinc-500 dark:text-zinc-400">
+                                Min: {{ bahan.stok_minimal|floatformat }} {{ bahan.satuan }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2.5 py-1 bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-md text-xs font-medium">
+                                {{ bahan.get_kategori_zona_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span
+                                class="text-lg font-semibold {% if bahan.stok_sekarang <= bahan.stok_minimal %}text-red-500{% else %}text-primary{% endif %}">
+                                {{ bahan.stok_sekarang|floatformat }}
+                            </span>
+                            <span class="text-xs text-zinc-500 dark:text-zinc-400 ml-1">{{ bahan.satuan }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <form onsubmit="updateManual(event)" class="flex items-center justify-center gap-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="bahan_id" value="{{ bahan.id }}">
+                                <input type="number" name="stok_baru" step="0.01"
+                                    class="w-24 px-3 py-1.5 border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-md text-sm focus:ring-2 focus:ring-primary outline-none transition-shadow"
+                                    placeholder="Angka...">
+                                <select name="tipe_update"
+                                    class="px-2 py-1.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-md text-sm outline-none focus:ring-2 focus:ring-primary">
+                                    <option value="set">Set</option>
+                                    <option value="tambah">Tambah</option>
+                                </select>
+                                <button type="submit"
+                                    class="p-1.5 bg-primary text-white rounded-md hover:bg-primary_hover transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Sidebar Saran & Feedback -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()"
+        class="fixed inset-0 bg-zinc-900/50 backdrop-blur-sm z-40 hidden transition-opacity"></div>
+    <div id="sidebar"
+        class="fixed inset-y-0 right-0 w-80 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col">
+        <div class="p-6 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+            <h2 class="text-lg font-semibold">Saran & Feedback</h2>
+            <button onclick="toggleSidebar()"
+                class="p-2 -mr-2 text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 flex-1 overflow-y-auto">
+            <form action="mailto:tubagussains07@gmail.com" method="post" enctype="text/plain" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Nama Anda</label>
+                    <input type="text" name="name"
+                        class="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow text-sm"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Pesan / Saran</label>
+                    <textarea name="body" rows="5"
+                        class="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow text-sm"
+                        required></textarea>
+                </div>
+                <button type="submit"
+                    class="w-full bg-primary hover:bg-primary_hover text-white font-medium py-2.5 rounded-lg transition-colors text-sm">
+                    Kirim via Email
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let recognition;
+        let isListening = false;
+        let finalTranscript = '';
+
+        function toggleRecognition() {
+            if (isListening) {
+                stopRecognition();
+            } else {
+                startRecognition();
+            }
+        }
+
+        function startRecognition() {
+            const btn = document.getElementById('mic-btn');
+            const status = document.getElementById('mic-status');
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+
+            recognition.lang = 'id-ID';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            finalTranscript = '';
+
+            recognition.onstart = () => {
+                isListening = true;
+                btn.classList.add('mic-active');
+                btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg> <span>Hentikan Suara</span>`;
+                status.innerText = "Mendengarkan... (Klik Hentikan saat selesai)";
+            };
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript + ' ';
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                status.innerText = `Mendengar: "${finalTranscript}${interimTranscript}"`;
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech error", event);
+                status.innerText = "Gagal mendengarkan, coba lagi.";
+                stopRecognitionUI();
+            };
+
+            recognition.onend = () => {
+                if (isListening) {
+                    processVoice(finalTranscript);
+                    stopRecognitionUI();
+                }
+            };
+
+            recognition.start();
+        }
+
+        function stopRecognition() {
+            if (recognition) {
+                recognition.stop();
+            }
+            stopRecognitionUI();
+            processVoice(finalTranscript);
+        }
+
+        function stopRecognitionUI() {
+            isListening = false;
+            const btn = document.getElementById('mic-btn');
+            btn.classList.remove('mic-active');
+            btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-10a3 3 0 00-3 3v2a3 3 0 006 0v-2a3 3 0 00-3-3z"></path></svg> <span>Update Suara</span>`;
+        }
+
+        function processVoice(text) {
+            const status = document.getElementById('mic-status');
+            if (!text || !text.trim()) {
+                status.innerText = "Suara tidak terdeteksi.";
+                return;
+            }
+            status.innerText = `Memproses: "${text}"`;
+
+            fetch(`/proses/?pesan=${encodeURIComponent(text.trim())}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'sukses') {
+                        const audio = new Audio('/static/konfirmasi_stok.mp3?t=' + new Date().getTime());
+                        audio.play().catch(e => console.log("Audio play failed", e));
+                        alert(data.log.join("\n"));
+                        location.reload();
+                    } else {
+                        alert(data.pesan_suara || "Gagal memproses.");
+                        status.innerText = "";
+                    }
+                })
+                .catch(() => {
+                    status.innerText = "Terjadi kesalahan koneksi.";
+                });
+        }
+
+        function updateManual(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+
+            fetch('/gudang/update/', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'sukses') {
+                        location.reload();
+                    } else {
+                        alert(data.pesan);
+                    }
+                });
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('translate-x-full');
+            document.getElementById('sidebar-overlay').classList.toggle('hidden');
+        }
+
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+    </script>
+</body>
+
+</html>

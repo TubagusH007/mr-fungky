@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - beech</title>
+    <meta name="color-scheme" content="light">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Setup Dark Mode
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb', // blue-600
+                        primary_hover: '#1d4ed8', // blue-700
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            backdrop-filter: blur(8px);
+        }
+
+        .card {
+            border-radius: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
+
+    <!-- Header Sticky -->
+    <header
+        class="sticky-header px-6 py-4 bg-white/80 dark:bg-zinc-900/80 border-b border-zinc-200 dark:border-zinc-800">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight">BVentory</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-zinc-500 dark:text-zinc-400 font-medium hidden sm:inline">
+                    Halo, {{ request.user.username }}
+                </span>
+                <button onclick="toggleDarkMode()"
+                    class="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors">
+                    <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                        </path>
+                    </svg>
+                    <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                        </path>
+                    </svg>
+                </button>
+                <button onclick="toggleSidebar()"
+                    class="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+                <a href="{% url 'logout' %}"
+                    class="text-sm font-semibold text-red-500 hover:text-red-600 hidden sm:inline">Keluar</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-10">
+        <!-- Grid Menu Utama -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            <!-- Gudang Stok -->
+            <a href="{% url 'halaman_gudang' %}"
+                class="card p-6 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 group">
+                <div
+                    class="w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
+                        </path>
+                    </svg>
+                </div>
+                <h2 class="text-lg font-semibold mb-1">Gudang Stok</h2>
+                <p class="text-zinc-500 dark:text-zinc-400 text-sm">Pantau ketersediaan bahan baku secara real-time.</p>
+            </a>
+
+            <!-- Prediksi AI -->
+            <a href="{% url 'halaman_prediksi' %}"
+                class="card p-6 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 group">
+                <div
+                    class="w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-lg font-semibold mb-1">Prediksi AI</h2>
+                <p class="text-zinc-500 dark:text-zinc-400 text-sm">Estimasi kebutuhan stok berdasarkan target antrian.
+                </p>
+            </a>
+
+            <!-- Stok Menipis -->
+            <div class="card p-6 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800">
+                <div
+                    class="w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                        </path>
+                    </svg>
+                </div>
+                <h2 class="text-lg font-semibold mb-4">Stok Menipis</h2>
+                
+                {% if total_menipis > 0 %}
+                <div class="grid grid-cols-1 gap-6">
+                    <!-- Kategori Teh -->
+                    {% if menipis_teh %}
+                    <div>
+                        <h3 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-2 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Teh
+                        </h3>
+                        <div class="space-y-1.5">
+                            {% for bahan in menipis_teh %}
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-zinc-600 dark:text-zinc-400">{{ bahan.nama_bahan }}</span>
+                                <span class="font-bold text-red-500">{{ bahan.stok_sekarang|floatformat }} {{ bahan.satuan }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Kategori Bahan Baku -->
+                    {% if menipis_bahan %}
+                    <div>
+                        <h3 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-2 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Bahan Baku
+                        </h3>
+                        <div class="space-y-1.5">
+                            {% for bahan in menipis_bahan %}
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-zinc-600 dark:text-zinc-400">{{ bahan.nama_bahan }}</span>
+                                <span class="font-bold text-red-500">{{ bahan.stok_sekarang|floatformat }} {{ bahan.satuan }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Kategori Topping -->
+                    {% if menipis_topping %}
+                    <div>
+                        <h3 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-2 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span> Topping
+                        </h3>
+                        <div class="space-y-1.5">
+                            {% for bahan in menipis_topping %}
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-zinc-600 dark:text-zinc-400">{{ bahan.nama_bahan }}</span>
+                                <span class="font-bold text-red-500">{{ bahan.stok_sekarang|floatformat }} {{ bahan.satuan }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-zinc-500 dark:text-zinc-400 text-sm">Semua stok dalam keadaan aman.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Section Riwayat -->
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold">Aktivitas Terakhir</h2>
+            <button id="btn-toggle-riwayat" onclick="toggleRiwayat()"
+                class="text-sm font-medium text-primary hover:text-primary_hover transition-colors">Sembunyikan
+                Riwayat</button>
+        </div>
+
+        <div id="section-riwayat"
+            class="card overflow-hidden bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+            <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+                <table class="w-full text-left">
+                    <thead class="sticky top-0 bg-white dark:bg-zinc-800 z-10">
+                        <tr
+                            class="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-700">
+                            <th class="px-6 py-4 font-semibold">Waktu</th>
+                            <th class="px-6 py-4 font-semibold">Petugas</th>
+                            <th class="px-6 py-4 font-semibold">Bahan</th>
+                            <th class="px-6 py-4 font-semibold">Jumlah Baru</th>
+                            <th class="px-6 py-4 font-semibold text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-200 dark:divide-zinc-700">
+                        {% for log in history %}
+                        <tr id="riwayat-{{ log.id }}" class="hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors">
+                            <td class="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400">
+                                {{ log.waktu|date:"H:i - d M" }}
+                            </td>
+                            <td class="px-6 py-4 text-sm font-medium">{{ log.petugas.username }}</td>
+                            <td class="px-6 py-4 text-sm">{{ log.bahan.nama_bahan }}</td>
+                            <td class="px-6 py-4 text-sm font-semibold text-primary">
+                                {{ log.jumlah_baru|floatformat }} {{ log.bahan.satuan }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-right">
+                                <button onclick="hapusRiwayat({{ log.id }})" class="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Hapus Riwayat">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr id="empty-riwayat">
+                            <td colspan="5" class="px-6 py-8 text-center text-zinc-400 dark:text-zinc-500 text-sm">Belum
+                                ada riwayat aktivitas.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Sidebar Saran & Feedback -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()"
+        class="fixed inset-0 bg-zinc-900/50 backdrop-blur-sm z-40 hidden transition-opacity"></div>
+    <div id="sidebar"
+        class="fixed inset-y-0 right-0 w-80 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col">
+        <div class="p-6 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+            <h2 class="text-lg font-semibold">Saran & Feedback</h2>
+            <button onclick="toggleSidebar()"
+                class="p-2 -mr-2 text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 flex-1 overflow-y-auto">
+            <form action="mailto:tubagussains07@gmail.com" method="post" enctype="text/plain" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Nama Anda</label>
+                    <input type="text" name="name"
+                        class="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow text-sm"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Pesan / Saran</label>
+                    <textarea name="body" rows="5"
+                        class="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow text-sm"
+                        required></textarea>
+                </div>
+                <button type="submit"
+                    class="w-full bg-primary hover:bg-primary_hover text-white font-medium py-2.5 rounded-lg transition-colors text-sm">
+                    Kirim via Email
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleRiwayat() {
+            const section = document.getElementById('section-riwayat');
+            const btn = document.getElementById('btn-toggle-riwayat');
+            section.classList.toggle('hidden');
+            
+            if (section.classList.contains('hidden')) {
+                btn.innerText = 'Tampilkan Riwayat';
+            } else {
+                btn.innerText = 'Sembunyikan Riwayat';
+            }
+        }
+
+        async function hapusRiwayat(id) {
+            if (!confirm('Apakah Anda yakin ingin menghapus riwayat ini?')) return;
+            
+            try {
+                const response = await fetch(`/riwayat/hapus/${id}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                if (data.status === 'sukses') {
+                    const row = document.getElementById(`riwayat-${id}`);
+                    row.remove();
+                    
+                    // Cek jika tabel kosong
+                    const tbody = document.querySelector('tbody');
+                    if (tbody.children.length === 0) {
+                        tbody.innerHTML = `
+                            <tr id="empty-riwayat">
+                                <td colspan="5" class="px-6 py-8 text-center text-zinc-400 dark:text-zinc-500 text-sm">Belum ada riwayat aktivitas.</td>
+                            </tr>
+                        `;
+                    }
+                } else {
+                    alert('Gagal menghapus: ' + data.pesan);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat menghapus riwayat.');
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('translate-x-full');
+            document.getElementById('sidebar-overlay').classList.toggle('hidden');
+        }
+
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+    </script>
+</body>
+
+</html>
