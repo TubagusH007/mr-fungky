@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.conf import settings
-from .models import BahanBaku, RiwayatStok, DataHistorisHarian
+from .models import BahanBaku, RiwayatStok, DataHistorisHarian, BarangMasuk
 from gtts import gTTS
 from django.http import HttpResponse
 from datetime import datetime
@@ -59,8 +59,11 @@ def proses_suara_massal(request):
     replacements = {
         'derigen': 'drigen', 'jerigen': 'drigen', 
         'zak': 'sak', 'pack': 'pak',
-        'dipros': 'deeproast', 'di pros': 'deeproast'
+        'dipros': 'deeproast', 'di pros': 'deeproast',
+        'crimmer': 'creamer', 'crimir': 'creamer', 'krimer': 'creamer', 'crimer': 'creamer', 'cerimer': 'creamer', 'kerimer': 'creamer',
+        'konjak': 'konjac', 'jeli': 'jelly'
     }
+
     for old, new in replacements.items():
         teks_input = teks_input.replace(old, new)
     
@@ -221,6 +224,15 @@ def api_kalkulasi_prediksi(request):
         # Kalkulasi estimasi untuk hari ini berdasarkan target antrian
         prediksi = {k: round(v * target_antrian, 2) for k, v in rasio.items()}
         
+        # Genapkan Konjac Jelly dan Cup (karena per pack/pcs, tidak ada koma)
+        if 'konjac_jelly' in prediksi:
+            prediksi['konjac_jelly'] = int(round(prediksi['konjac_jelly']))
+        if 'paper_cup_besar' in prediksi:
+            prediksi['paper_cup_besar'] = int(round(prediksi['paper_cup_besar']))
+        if 'paper_cup_kecil' in prediksi:
+            prediksi['paper_cup_kecil'] = int(round(prediksi['paper_cup_kecil']))
+
+        
         return JsonResponse({'status': 'sukses', 'prediksi': prediksi})
     except Exception as e:
         return JsonResponse({'status': 'gagal', 'pesan': str(e)})
@@ -228,7 +240,47 @@ def api_kalkulasi_prediksi(request):
 @login_required
 def halaman_gudang(request):
     semua_bahan = BahanBaku.objects.all().order_by('kategori_zona', 'nama_bahan')
-    return render(request, 'inventory/gudang.html', {'semua_bahan': semua_bahan})
+    riwayat_masuk = BarangMasuk.objects.all()[:10]
+    return render(request, 'inventory/gudang.html', {
+        'semua_bahan': semua_bahan,
+        'riwayat_masuk': riwayat_masuk
+    })
+
+@login_required
+def simpan_barang_masuk(request):
+    if request.method == 'POST':
+        bahan_id = request.POST.get('bahan_id')
+        jumlah = request.POST.get('jumlah')
+        penerima = request.POST.get('penerima')
+        
+        try:
+            bahan = BahanBaku.objects.get(id=bahan_id)
+            jumlah_float = float(jumlah)
+            
+            # Update stok utama
+            bahan.stok_sekarang += jumlah_float
+            bahan.save()
+            
+            # Catat riwayat barang masuk
+            BarangMasuk.objects.create(
+                bahan=bahan,
+                jumlah=jumlah_float,
+                penerima=penerima,
+                zona=bahan.get_kategori_zona_display()
+            )
+            
+            # Juga catat di RiwayatStok umum
+            RiwayatStok.objects.create(
+                petugas=request.user,
+                bahan=bahan,
+                jumlah_baru=bahan.stok_sekarang
+            )
+            
+            return JsonResponse({'status': 'sukses', 'pesan': f'Stok {bahan.nama_bahan} berhasil ditambah.'})
+        except Exception as e:
+            return JsonResponse({'status': 'gagal', 'pesan': str(e)})
+    return JsonResponse({'status': 'gagal', 'pesan': 'Method not allowed'})
+
 
 @login_required
 def update_stok_manual(request):
@@ -241,10 +293,21 @@ def update_stok_manual(request):
             bahan = BahanBaku.objects.get(id=bahan_id)
             angka_input = float(stok_baru)
             
-            if tipe_update == 'tambah':
+            if tipe_update == 'set_gr':
+                if bahan.satuan.lower() == 'kg':
+                    angka_akhir = angka_input / 1000
+                else:
+                    angka_akhir = angka_input
+            elif tipe_update == 'set_pack':
+                # Konversi 1 pack = 20 cup (Menambah stok)
+                angka_akhir = bahan.stok_sekarang + (angka_input * 20)
+            elif tipe_update == 'tambah_kg':
                 angka_akhir = bahan.stok_sekarang + angka_input
             else:
                 angka_akhir = angka_input
+
+
+
                 
             bahan.stok_sekarang = angka_akhir
             bahan.save()
@@ -297,6 +360,14 @@ def terapkan_prediksi_stok(request):
             }
             
             prediksi = {k: round(v * target_antrian, 2) for k, v in rasio.items()}
+            # Genapkan Konjac Jelly dan Cup (karena per pack/pcs, tidak ada koma)
+            if 'konjac_jelly' in prediksi:
+                prediksi['konjac_jelly'] = int(round(prediksi['konjac_jelly']))
+            if 'paper_cup_besar' in prediksi:
+                prediksi['paper_cup_besar'] = int(round(prediksi['paper_cup_besar']))
+            if 'paper_cup_kecil' in prediksi:
+                prediksi['paper_cup_kecil'] = int(round(prediksi['paper_cup_kecil']))
+
             
             daftar_bahan = BahanBaku.objects.all()
             bahan_diperbarui = []

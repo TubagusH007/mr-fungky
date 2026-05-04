@@ -151,8 +151,10 @@
                         class="w-full mt-6 bg-white text-primary font-semibold py-2.5 rounded-lg hover:bg-zinc-50 transition-colors">Hitung
                         Estimasi</button>
                 </div>
+            </div>
 
-                <!-- Hasil Prediksi -->
+            <!-- Kanan: Hasil Prediksi -->
+            <div>
                 <div id="hasil-prediksi-container"
                     class="card p-8 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hidden">
                     <h3 class="text-lg font-semibold mb-6 flex items-center gap-2">
@@ -174,60 +176,56 @@
                         Jalankan Pemotongan Stok
                     </button>
                 </div>
-            </div>
 
-            <!-- Kanan: Input Data Latih -->
-            <div class="card p-8 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                <h3 class="text-lg font-semibold mb-6">Input Data Latih (Akurasi AI)</h3>
-                <form onsubmit="simpanHistoris(event)" class="space-y-4">
-                    {% csrf_token %}
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="number" name="jumlah_antrian" placeholder="Antrian" class="input-field text-sm"
-                            required>
-                        <input type="number" name="omset" placeholder="Omset (Rp)" class="input-field text-sm" required>
-                    </div>
-                    <div class="grid grid-cols-3 gap-3">
-                        <div><label
-                                class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Deeproast
-                                (gr)</label><input type="number" name="deeproast" class="input-field text-xs py-1.5"
-                                required></div>
-                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">4
-                                Season (gr)</label><input type="number" name="four_season"
-                                class="input-field text-xs py-1.5" required></div>
-                        <div><label
-                                class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Jasmine
-                                (gr)</label><input type="number" name="jasmine" class="input-field text-xs py-1.5"
-                                required></div>
-                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Boba
-                                (gr)</label><input type="number" name="boba" class="input-field text-xs py-1.5"
-                                required></div>
-                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Cup
-                                Besar</label><input type="number" name="paper_cup_besar"
-                                class="input-field text-xs py-1.5" required></div>
-                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Cup
-                                Kecil</label><input type="number" name="paper_cup_kecil"
-                                class="input-field text-xs py-1.5" required></div>
-                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Gula
-                                Pasir (gr)</label><input type="number" name="gula" class="input-field text-xs py-1.5"
-                                required></div>
-                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Gula
-                                Cair (ml)</label><input type="number" name="gula_cair"
-                                class="input-field text-xs py-1.5" required></div>
-                        <div><label
-                                class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Creamer
-                                (kg)</label><input type="number" step="0.01" name="creamer"
-                                class="input-field text-xs py-1.5" required></div>
-                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Honey
-                                (btl)</label><input type="number" step="0.01" name="honey_syrup"
-                                class="input-field text-xs py-1.5" required></div>
-                        <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Konjac
-                                (pck)</label><input type="number" step="0.01" name="konjac_jelly"
-                                class="input-field text-xs py-1.5" required></div>
-                    </div>
-                    <button type="submit"
-                        class="w-full bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium py-2.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors text-sm">Simpan
-                        Data Latih</button>
-                </form>
+                <!-- Hidden Data Latih Form (System Only) -->
+                <div class="hidden">
+                    <form onsubmit="simpanHistoris(event)" class="space-y-4">
+                        {% csrf_token %}
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="number" name="jumlah_antrian" placeholder="Antrian" class="input-field text-sm"
+                                required>
+                            <input type="number" name="omset" placeholder="Omset (Rp)" class="input-field text-sm" required>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div><label
+                                    class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Deeproast
+                                    (gr)</label><input type="number" name="deeproast" class="input-field text-xs py-1.5"
+                                    required></div>
+                            <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">4
+                                    Season (gr)</label><input type="number" name="four_season"
+                                    class="input-field text-xs py-1.5" required></div>
+                            <div><label
+                                    class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Jasmine
+                                    (gr)</label><input type="number" name="jasmine" class="input-field text-xs py-1.5"
+                                    required></div>
+                            <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Boba
+                                    (gr)</label><input type="number" name="boba" class="input-field text-xs py-1.5"
+                                    required></div>
+                            <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Cup
+                                    Besar</label><input type="number" name="paper_cup_besar"
+                                    class="input-field text-xs py-1.5" required></div>
+                            <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Cup
+                                    Kecil</label><input type="number" name="paper_cup_kecil"
+                                    class="input-field text-xs py-1.5" required></div>
+                            <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Gula
+                                    Pasir (gr)</label><input type="number" name="gula" class="input-field text-xs py-1.5"
+                                    required></div>
+                            <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Gula
+                                    Cair (ml)</label><input type="number" name="gula_cair"
+                                    class="input-field text-xs py-1.5" required></div>
+                            <div><label
+                                    class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Creamer
+                                    (kg)</label><input type="number" step="0.01" name="creamer"
+                                    class="input-field text-xs py-1.5" required></div>
+                            <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Honey
+                                    (btl)</label><input type="number" step="0.01" name="honey_syrup"
+                                    class="input-field text-xs py-1.5" required></div>
+                            <div><label class="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 mb-1 block">Konjac
+                                    (pck)</label><input type="number" step="0.01" name="konjac_jelly"
+                                    class="input-field text-xs py-1.5" required></div>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </main>

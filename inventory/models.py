@@ -59,3 +59,16 @@ class DataHistorisHarian(models.Model):
 
     class Meta:
         ordering = ['-tanggal']
+
+class BarangMasuk(models.Model):
+    bahan = models.ForeignKey(BahanBaku, on_delete=models.CASCADE)
+    jumlah = models.FloatField()
+    tanggal = models.DateTimeField(auto_now_add=True)
+    penerima = models.CharField(max_length=100)
+    zona = models.CharField(max_length=50) # Snapshot zona saat masuk
+
+    def __str__(self):
+        return f"{self.bahan.nama_bahan} - {self.jumlah} - {self.tanggal.strftime('%d/%m/%Y')}"
+
+    class Meta:
+        ordering = ['-tanggal']
