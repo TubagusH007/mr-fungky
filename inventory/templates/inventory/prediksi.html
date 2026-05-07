@@ -265,8 +265,15 @@
                 </button>
             </form>
 
-            <div class="mt-10 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-                <a href="{% url 'logout' %}" 
+            <div class="mt-10 pt-6 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+                <a href="{% url 'logout' %}" onclick="confirmSwitchAccount(event)"
+                    class="flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                    </svg>
+                    Beralih Akun
+                </a>
+                <a href="{% url 'logout' %}" onclick="confirmLogout(event)"
                     class="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V7"></path>
@@ -278,6 +285,32 @@
     </div>
 
     <script>
+        // Session & Navigation Logic
+        const currentUser = "{{ request.user.username }}";
+        if (currentUser) {
+            let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts') || '[]');
+            if (!savedAccounts.includes(currentUser)) {
+                savedAccounts.push(currentUser);
+                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
+            }
+        }
+
+        function confirmLogout(event) {
+            event.preventDefault();
+            const url = event.currentTarget.href;
+            if (confirm("Apa kamu yakin ingin keluar sistem?")) {
+                window.location.href = url;
+            }
+        }
+
+        function confirmSwitchAccount(event) {
+            event.preventDefault();
+            const url = event.currentTarget.href;
+            if (confirm("Beralih akun akan mengeluarkan Anda dari sesi ini. Lanjutkan?")) {
+                window.location.href = url;
+            }
+        }
+
         const labelMap = {
             deeproast: 'Deeproast Oolong', four_season: 'Four Season', jasmine: 'Jasmine Tea',
             boba: 'Boba', paper_cup_besar: 'Cup Besar', paper_cup_kecil: 'Cup Kecil',

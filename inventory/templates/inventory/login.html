@@ -64,6 +64,14 @@
             </div>
             {% endif %}
 
+            <!-- Section Akun Tersimpan -->
+            <div id="saved-accounts-section" class="hidden mb-8">
+                <p class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase mb-3 ml-1">Beralih Akun Cepat</p>
+                <div id="accounts-list" class="flex flex-wrap gap-2">
+                    <!-- Akun diisi via JS -->
+                </div>
+            </div>
+
             <form method="POST" class="space-y-4">
                 {% csrf_token %}
                 <div>
@@ -96,6 +104,35 @@
         </div>
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedAccounts = JSON.parse(localStorage.getItem('savedAccounts') || '[]');
+            const container = document.getElementById('saved-accounts-section');
+            const list = document.getElementById('accounts-list');
+            const usernameInput = document.querySelector('input[name="username"]');
+            const passwordInput = document.querySelector('input[name="password"]');
+
+            if (savedAccounts.length > 0) {
+                container.classList.remove('hidden');
+                savedAccounts.forEach(username => {
+                    const btn = document.createElement('button');
+                    btn.type = "button";
+                    btn.className = "flex items-center gap-2 px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:border-primary rounded-xl text-sm font-medium transition-all group";
+                    btn.innerHTML = `
+                        <div class="w-6 h-6 bg-zinc-200 dark:bg-zinc-700 group-hover:bg-primary group-hover:text-white rounded-md flex items-center justify-center text-[10px] transition-colors">
+                            ${username.charAt(0).toUpperCase()}
+                        </div>
+                        <span>${username}</span>
+                    `;
+                    btn.onclick = () => {
+                        usernameInput.value = username;
+                        passwordInput.focus();
+                    };
+                    list.appendChild(btn);
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>
