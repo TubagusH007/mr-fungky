@@ -61,7 +61,9 @@ def proses_suara_massal(request):
         'zak': 'sak', 'pack': 'pak',
         'dipros': 'deeproast', 'di pros': 'deeproast',
         'crimmer': 'creamer', 'crimir': 'creamer', 'krimer': 'creamer', 'crimer': 'creamer', 'cerimer': 'creamer', 'kerimer': 'creamer',
-        'konjak': 'konjac', 'jeli': 'jelly'
+        'konjak': 'konjac', 'jeli': 'jelly',
+        'nol': '0', 'satu': '1', 'dua': '2', 'tiga': '3', 'empat': '4', 'lima': '5',
+        'enam': '6', 'tujuh': '7', 'delapan': '8', 'sembilan': '9', 'sepuluh': '10'
     }
 
     for old, new in replacements.items():
@@ -81,11 +83,11 @@ def proses_suara_massal(request):
             is_match = True
             
         if is_match:
-            # Cari angka pertama yang muncul di seluruh kalimat
-            match = re.search(r"(\d+)", teks_input)
+            # Cari angka (termasuk desimal dengan titik atau koma)
+            match = re.search(r"(\d+[,.]?\d*)", teks_input)
             
             if match:
-                angka_raw = float(match.group(1))
+                angka_raw = float(match.group(1).replace(',', '.'))
                 angka_final = angka_raw
                 
                 # Logika khusus Gula Cair dengan satuan Drigen (1 Drigen = 10.000 ml)

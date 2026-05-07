@@ -418,7 +418,8 @@
 
         let recognition;
         let isListening = false;
-        let finalTranscript = '';
+        let isProcessing = false;
+        let currentTranscript = '';
 
         function toggleRecognition() {
             if (isListening) {
@@ -429,14 +430,23 @@
         }
 
         function startRecognition() {
+            if (isProcessing) return;
+
             const btn = document.getElementById('mic-btn');
             const status = document.getElementById('mic-status');
-            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Browser Anda tidak mendukung perintah suara.");
+                return;
+            }
+            
+            recognition = new SpeechRecognition();
             recognition.lang = 'id-ID';
             recognition.continuous = true;
             recognition.interimResults = true;
-            finalTranscript = '';
+            currentTranscript = '';
+            isProcessing = false;
 
             recognition.onstart = () => {
                 isListening = true;
@@ -446,26 +456,27 @@
             };
 
             recognition.onresult = (event) => {
-                let interimTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript + ' ';
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
+                let sessionTranscript = '';
+                for (let i = 0; i < event.results.length; ++i) {
+                    sessionTranscript += event.results[i][0].transcript + ' ';
                 }
-                status.innerText = `Mendengar: "${finalTranscript}${interimTranscript}"`;
+                currentTranscript = sessionTranscript.trim();
+                status.innerText = `Mendengar: "${currentTranscript}"`;
             };
 
             recognition.onerror = (event) => {
                 console.error("Speech error", event);
-                status.innerText = "Gagal mendengarkan, coba lagi.";
+                if (event.error === 'not-allowed') {
+                    status.innerText = "Izin mikrofon ditolak.";
+                } else {
+                    status.innerText = "Gagal mendengarkan, coba lagi.";
+                }
                 stopRecognitionUI();
             };
 
             recognition.onend = () => {
-                if (isListening) {
-                    processVoice(finalTranscript);
+                if (isListening && !isProcessing) {
+                    processVoice(currentTranscript);
                     stopRecognitionUI();
                 }
             };
@@ -477,8 +488,10 @@
             if (recognition) {
                 recognition.stop();
             }
+            if (isListening && !isProcessing) {
+                processVoice(currentTranscript);
+            }
             stopRecognitionUI();
-            processVoice(finalTranscript);
         }
 
         function stopRecognitionUI() {
@@ -489,12 +502,20 @@
         }
 
         function processVoice(text) {
+            if (isProcessing) return;
+            
             const status = document.getElementById('mic-status');
+            const btn = document.getElementById('mic-btn');
+            
             if (!text || !text.trim()) {
                 status.innerText = "Suara tidak terdeteksi.";
                 return;
             }
+            
+            isProcessing = true;
             status.innerText = `Memproses: "${text}"`;
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Memproses...</span>`;
 
             fetch(`/proses/?pesan=${encodeURIComponent(text.trim())}`)
                 .then(r => r.json())
@@ -507,10 +528,16 @@
                     } else {
                         alert(data.pesan_suara || "Gagal memproses.");
                         status.innerText = "";
+                        isProcessing = false;
+                        btn.disabled = false;
+                        stopRecognitionUI();
                     }
                 })
                 .catch(() => {
                     status.innerText = "Terjadi kesalahan koneksi.";
+                    isProcessing = false;
+                    btn.disabled = false;
+                    stopRecognitionUI();
                 });
         }
 
