@@ -69,75 +69,104 @@ def proses_suara_massal(request):
     for old, new in replacements.items():
         teks_input = teks_input.replace(old, new)
     
-    for bahan in daftar_bahan:
-        # Bersihkan nama dari database untuk pencocokan
-        nama_db = bahan.nama_bahan.lower().strip()
-        kata_kunci = nama_db.split()[0]
-        
-        # Logika: Cek apakah nama lengkap ada di input, 
-        # ATAU kata kuncinya ada di input (kecuali untuk kata umum seperti 'gula', 'paper', 'cup')
-        is_match = nama_db in teks_input or (kata_kunci in teks_input and len(kata_kunci) > 3 and kata_kunci not in ['gula', 'paper', 'cup'])
-        
-        # Penanganan khusus Gula Cair: jika ada kata 'drigen', paksa kecocokan ke Gula Cair
-        if 'drigen' in teks_input and 'gula cair' in nama_db:
-            is_match = True
+    # 2. Otak Parser Suara (Multi-Item & Fuzzy Matching)
+    # Pisahkan input berdasarkan pemisah umum (dan, lalu, kemudian, koma, titik, serta, juga)
+    pemisah = [r'\bdan\b', r'\blalu\b', r'\bkemudian\b', r',', r'\.', r'\bserta\b', r'\bjuga\b']
+    pattern_pemisah = '|'.join(pemisah)
+    segmen_input = re.split(pattern_pemisah, teks_input)
+    
+    hasil_update = []
+    
+    # Kita looping setiap segmen hasil pemisahan
+    for segmen in segmen_input:
+        current_segmen = segmen.strip()
+        if not current_segmen:
+            continue
             
-        if is_match:
-            # Cari angka (termasuk desimal dengan titik atau koma)
-            match = re.search(r"(\d+[,.]?\d*)", teks_input)
+        # Untuk setiap segmen, kita cari bahan yang cocok
+        # Kita looping daftar_bahan yang sudah diurutkan berdasarkan panjang nama
+        for bahan in daftar_bahan:
+            nama_db = bahan.nama_bahan.lower().strip()
+            kata_kunci = nama_db.split()[0]
             
-            if match:
-                angka_raw = float(match.group(1).replace(',', '.'))
-                angka_final = angka_raw
+            # Cek apakah bahan ada di segmen ini
+            is_match = nama_db in current_segmen or (kata_kunci in current_segmen and len(kata_kunci) > 3 and kata_kunci not in ['gula', 'paper', 'cup'])
+            
+            # Penanganan khusus Gula Cair jika ada kata 'drigen' di segmen
+            if 'drigen' in current_segmen and 'gula cair' in nama_db:
+                is_match = True
                 
-                # Logika khusus Gula Cair dengan satuan Drigen (1 Drigen = 10.000 ml)
-                info_unit = ""
-                if 'drigen' in teks_input and 'gula cair' in nama_db:
-                    angka_final = angka_raw * 10000
-                    info_unit = f" ({int(angka_raw)} drigen)"
+            if is_match:
+                # Cari angka di segmen ini
+                match_angka = re.search(r"(\d+[,.]?\d*)", current_segmen)
                 
-                # Logika khusus Creamer dengan satuan Sak (1 Sak = 25 kg)
-                elif 'sak' in teks_input and 'creamer' in nama_db:
-                    angka_final = angka_raw * 25
-                    info_unit = f" ({int(angka_raw)} sak)"
-                
-                # Deteksi apakah penambahan stok atau set ulang
-                if any(kata in teks_input for kata in ['tambah', 'masuk', 'restok', 'plus']):
-                    stok_akhir = bahan.stok_sekarang + angka_final
-                    hasil_update.append(f"{bahan.nama_bahan} ditambah {int(angka_final)}{info_unit}")
-                else:
-                    stok_akhir = angka_final
-                    hasil_update.append(f"{bahan.nama_bahan} sisa {int(angka_final)}{info_unit}")
-                
-                # Update Stok di Database
-                bahan.stok_sekarang = stok_akhir
-                bahan.save()
-                
-                # Catat petugas yang sedang login
-                RiwayatStok.objects.create(
-                    petugas=request.user,
-                    bahan=bahan,
-                    jumlah_baru=stok_akhir
-                )
-                
-                # Hentikan pencarian untuk bahan ini agar tidak double update
-                break 
+                if match_angka:
+                    angka_raw = float(match_angka.group(1).replace(',', '.'))
+                    angka_final = angka_raw
+                    
+                    # Logika khusus Gula Cair dengan satuan Drigen (1 Drigen = 10.000 ml)
+                    info_unit = ""
+                    if 'drigen' in current_segmen and 'gula cair' in nama_db:
+                        angka_final = angka_raw * 10000
+                        info_unit = f" ({int(angka_raw)} drigen)"
+                    
+                    # Logika khusus Creamer dengan satuan Sak (1 Sak = 25 kg)
+                    elif 'sak' in current_segmen and 'creamer' in nama_db:
+                        angka_final = angka_raw * 25
+                        info_unit = f" ({int(angka_raw)} sak)"
+                    
+                    # Deteksi apakah penambahan stok atau set ulang
+                    if any(kata in current_segmen for kata in ['tambah', 'masuk', 'restok', 'plus']):
+                        stok_akhir = bahan.stok_sekarang + angka_final
+                        hasil_update.append(f"{bahan.nama_bahan} ditambah {int(angka_final)}{info_unit}")
+                    else:
+                        stok_akhir = angka_final
+                        hasil_update.append(f"{bahan.nama_bahan} sisa {int(angka_final)}{info_unit}")
+                    
+                    # Update Stok di Database
+                    bahan.stok_sekarang = stok_akhir
+                    bahan.save()
+                    
+                    # Catat di RiwayatStok
+                    RiwayatStok.objects.create(
+                        petugas=request.user,
+                        bahan=bahan,
+                        jumlah_baru=stok_akhir
+                    )
+                    
+                    # Masking: Hapus bahan dan angka yang sudah diproses dari current_segmen 
+                    # agar tidak memicu deteksi bahan lain yang mirip atau angka yang sama di segmen yang sama
+                    # Kita ganti dengan spasi agar posisi karakter lain tidak berubah secara drastis (meskipun di sini kita tidak pakai index setelahnya)
+                    match_nama_index = current_segmen.find(nama_db)
+                    if match_nama_index == -1 and kata_kunci in current_segmen:
+                        match_nama_index = current_segmen.find(kata_kunci)
+                    
+                    if match_nama_index != -1:
+                        len_nama = len(nama_db) if nama_db in current_segmen else len(kata_kunci)
+                        current_segmen = current_segmen[:match_nama_index] + (" " * len_nama) + current_segmen[match_nama_index + len_nama:]
+                    
+                    start_a, end_a = match_angka.span()
+                    current_segmen = current_segmen[:start_a] + (" " * (end_a - start_a)) + current_segmen[end_a:]
+                    
+                    # Kita tetap lanjut looping daftar_bahan untuk mencari bahan lain di segmen yang sama
+                    # jika segmen tersebut ternyata mengandung beberapa bahan (misal tanpa pemisah 'dan')
 
     # 3. Logika Suara Konfirmasi (gTTS)
     if hasil_update:
-        teks_suara = f"Berhasil. {request.user.username}, " + " dan ".join(hasil_update) + " sudah diperbarui."
+        # Jika bahan yang diupdate banyak, ringkas pesan suara agar tidak terlalu panjang
+        if len(hasil_update) > 3:
+            teks_suara = f"Berhasil. {request.user.username}, {len(hasil_update)} bahan sudah diperbarui."
+        else:
+            teks_suara = f"Berhasil. {request.user.username}, " + " dan ".join(hasil_update) + " sudah diperbarui."
         
         tts = gTTS(text=teks_suara, lang='id')
         audio_path = os.path.join(settings.BASE_DIR, "static/konfirmasi_stok.mp3")
         
         try:
-            # Pastikan folder static ada sebelum simpan
             if not os.path.exists(os.path.dirname(audio_path)):
                 os.makedirs(os.path.dirname(audio_path))
-                
             tts.save(audio_path)
         except Exception as e:
-            # Jika gTTS gagal (misal tidak ada internet), jangan gagalkan update stok
             print(f"Warning: gTTS Error - {e}")
     else:
         teks_suara = "Maaf Bee, sistem tidak mengenali bahan tersebut."
@@ -147,6 +176,7 @@ def proses_suara_massal(request):
         'log': hasil_update,
         'pesan_suara': teks_suara
     })
+
 
 @login_required
 def halaman_prediksi(request):
