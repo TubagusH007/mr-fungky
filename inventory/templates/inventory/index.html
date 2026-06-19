@@ -91,7 +91,7 @@
                     </svg>
                 </button>
                 <a href="{% url 'logout' %}" onclick="confirmLogout(event)"
-                    class="text-sm font-semibold text-red-500 hover:text-red-600 hidden sm:inline">Keluar</a>
+                    class="text-sm font-bold text-red-500 hover:text-red-600 {% if request.user.profile.role == 'MANAGER' %}inline-block{% else %}hidden sm:inline{% endif %}">Keluar</a>
             </div>
         </div>
     </header>
@@ -617,7 +617,6 @@
         if (currentUser) {
             runHeartbeat();
             setInterval(runHeartbeat, 5000);
-        }
         }
     </script>
 </body>
