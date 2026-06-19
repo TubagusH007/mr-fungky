@@ -91,7 +91,7 @@
                     </svg>
                 </button>
                 <a href="{% url 'logout' %}" onclick="confirmLogout(event)"
-                    class="text-sm font-bold text-red-500 hover:text-red-600 {% if request.user.profile.role == 'MANAGER' %}inline-block{% else %}hidden sm:inline{% endif %}">Keluar</a>
+                    class="text-sm font-bold text-red-500 hover:text-red-600 hidden sm:inline">Keluar</a>
             </div>
         </div>
     </header>
@@ -403,10 +403,15 @@
         // Session & Navigation Logic
         const currentUser = "{{ request.user.username }}";
         if (currentUser) {
-            let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts') || '[]');
-            if (!savedAccounts.includes(currentUser)) {
-                savedAccounts.push(currentUser);
-                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
+            try {
+                let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts') || '[]');
+                if (!savedAccounts.includes(currentUser)) {
+                    savedAccounts.push(currentUser);
+                    localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
+                }
+            } catch (e) {
+                console.error("Error parsing savedAccounts", e);
+                localStorage.setItem('savedAccounts', JSON.stringify([currentUser]));
             }
         }
 
@@ -493,9 +498,13 @@
 
         async function runHeartbeat() {
             try {
-                const response = await fetch('/api/heartbeat/', {
+                const response = await fetch('/api/heartbeat/?_=' + new Date().getTime(), {
                     method: 'GET',
-                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                    headers: { 
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate'
+                    },
+                    cache: 'no-store'
                 });
                 const data = await response.json();
                 
@@ -515,7 +524,12 @@
                         const notesContainer = document.getElementById('notes-popup-container');
                         if (notesContainer) {
                             data.notes.forEach(note => {
-                                const dismissedNotes = JSON.parse(localStorage.getItem('dismissed_notes') || '[]');
+                                let dismissedNotes = [];
+                                try {
+                                    dismissedNotes = JSON.parse(localStorage.getItem('dismissed_notes') || '[]');
+                                } catch (e) {
+                                    dismissedNotes = [];
+                                }
                                 if (!dismissedNotes.includes(note.id)) {
                                     if (!document.getElementById(`popup-note-${note.id}`)) {
                                         const noteDiv = document.createElement('div');
@@ -546,8 +560,13 @@
             }
         }
 
-        function dismissNote(id) {
-            const dismissedNotes = JSON.parse(localStorage.getItem('dismissed_notes') || '[]');
+        function dismissNoteForEmployee(id) {
+            let dismissedNotes = [];
+            try {
+                dismissedNotes = JSON.parse(localStorage.getItem('dismissed_notes') || '[]');
+            } catch (e) {
+                dismissedNotes = [];
+            }
             if (!dismissedNotes.includes(id)) {
                 dismissedNotes.push(id);
                 localStorage.setItem('dismissed_notes', JSON.stringify(dismissedNotes));
@@ -610,7 +629,7 @@
             if (userRole === 'MANAGER') {
                 dismissNoteFromManagerPanel(id);
             } else {
-                dismissNote(id);
+                dismissNoteForEmployee(id);
             }
         };
 
