@@ -157,6 +157,7 @@
 
             <!-- Voice Update Section -->
             <div class="flex flex-col items-end gap-2">
+                {% if request.user.profile.role != 'MANAGER' %}
                 <button id="mic-btn" onclick="toggleRecognition()" class="btn-voice shadow-sm">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -165,6 +166,16 @@
                     </svg>
                     <span>Update Suara</span>
                 </button>
+                {% else %}
+                <button disabled class="btn-voice opacity-50 cursor-not-allowed shadow-sm" title="Fitur suara dinonaktifkan untuk Manager">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-10a3 3 0 00-3 3v2a3 3 0 006 0v-2a3 3 0 00-3-3z">
+                        </path>
+                    </svg>
+                    <span>Update Suara (Karyawan)</span>
+                </button>
+                {% endif %}
                 <p id="mic-status" class="text-xs font-medium text-zinc-500 dark:text-zinc-400 h-4"></p>
             </div>
         </div>
@@ -216,6 +227,7 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
+                                    {% if request.user.profile.role != 'MANAGER' %}
                                     <form onsubmit="updateManual(event)" class="flex items-center justify-center gap-2">
                                         {% csrf_token %}
                                         <input type="hidden" name="bahan_id" value="{{ bahan.id }}">
@@ -245,6 +257,9 @@
                                             </svg>
                                         </button>
                                     </form>
+                                    {% else %}
+                                    <div class="text-xs text-zinc-400 dark:text-zinc-500 italic text-center font-medium">Hanya Bisa Memantau</div>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -283,7 +298,12 @@
                                     <span class="text-green-600 font-bold">+{{ masuk.jumlah|floatformat }}</span>
                                     <span class="text-xs text-zinc-400 ml-1">{{ masuk.bahan.satuan }}</span>
                                 </td>
-                                <td class="px-6 py-4 text-sm">{{ masuk.penerima }}</td>
+                                <td class="px-6 py-4 text-sm">
+                                    {{ masuk.penerima }}
+                                    {% if masuk.penginput and masuk.penginput.profile.role == 'MANAGER' %}
+                                    <span class="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded ml-1.5">Manager</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
@@ -352,6 +372,19 @@
         </div>
     </div>
 
+    <!-- Pop-up Catatan Karyawan -->
+    <div id="notes-popup-container" class="fixed bottom-6 right-6 z-[100] max-w-sm w-full space-y-3 pointer-events-none">
+        <!-- Catatan diisi via JS -->
+    </div>
+
+    <!-- Banner Pemantauan (Floating Indicator) -->
+    <div id="monitoring-banner" class="fixed bottom-6 left-6 z-[90] hidden">
+        <div class="flex items-center gap-2.5 px-4 py-3 bg-amber-500 text-white font-bold text-xs rounded-2xl shadow-xl border border-amber-600 animate-bounce">
+            <span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+            <span>👁️ Manager sedang memantau...</span>
+        </div>
+    </div>
+
     <!-- Modal Barang Masuk -->
     <div id="modal-masuk" class="fixed inset-0 bg-zinc-900/60 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-zinc-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
@@ -365,10 +398,10 @@
                 {% csrf_token %}
                 <div>
                     <label class="block text-sm font-semibold mb-1.5">Pilih Bahan Baku</label>
-                    <select name="bahan_id" required class="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all">
-                        <option value="">-- Pilih Bahan --</option>
+                    <select name="bahan_id" required onchange="updateSatuanMasuk(this)" class="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all">
+                        <option value="" data-satuan="GR">-- Pilih Bahan --</option>
                         {% for bahan in semua_bahan %}
-                        <option value="{{ bahan.id }}">{{ bahan.nama_bahan }} ({{ bahan.get_kategori_zona_display }})</option>
+                        <option value="{{ bahan.id }}" data-satuan="{{ bahan.satuan|upper }}">{{ bahan.nama_bahan }} ({{ bahan.get_kategori_zona_display }})</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -377,7 +410,7 @@
                         <label class="block text-sm font-semibold mb-1.5">Jumlah Masuk</label>
                         <div class="relative">
                             <input type="number" name="jumlah" step="0.01" required placeholder="0.00" class="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all">
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">GR</span>
+                            <span id="label-satuan-masuk" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">GR</span>
                         </div>
                     </div>
                     <div>
@@ -399,6 +432,12 @@
         function toggleModal(id) {
             const modal = document.getElementById(id);
             modal.classList.toggle('hidden');
+        }
+
+        function updateSatuanMasuk(selectElement) {
+            const selectedOption = selectElement.options[selectElement.selectedIndex];
+            const unit = selectedOption.getAttribute('data-satuan') || 'GR';
+            document.getElementById('label-satuan-masuk').innerText = unit;
         }
 
         function updateUnitLabel(select, bahanId, baseUnit) {
@@ -529,6 +568,12 @@
                 return;
             }
             
+            if (!confirm('Apakah ini sudah benar?\n\n"' + text + '"')) {
+                stopRecognitionUI();
+                status.innerText = "Dibatalkan.";
+                return;
+            }
+            
             isProcessing = true;
             status.innerText = `Memproses: "${text}"`;
             btn.disabled = true;
@@ -617,6 +662,83 @@
                 document.documentElement.classList.add('dark');
                 localStorage.theme = 'dark';
             }
+        }
+
+        // Heartbeat, Monitoring & Notes Logic
+        const userRole = "{{ request.user.profile.role }}";
+
+        async function runHeartbeat() {
+            try {
+                const response = await fetch('/api/heartbeat/', {
+                    method: 'GET',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                });
+                const data = await response.json();
+                
+                if (data.status === 'sukses') {
+                    // Update monitoring banner
+                    const monitorBanner = document.getElementById('monitoring-banner');
+                    if (monitorBanner) {
+                        if (data.manager_active && userRole === 'KARYAWAN') {
+                            monitorBanner.classList.remove('hidden');
+                        } else {
+                            monitorBanner.classList.add('hidden');
+                        }
+                    }
+                    
+                    // Show notes pop-up to Employee
+                    if (userRole === 'KARYAWAN' && data.notes.length > 0) {
+                        const notesContainer = document.getElementById('notes-popup-container');
+                        if (notesContainer) {
+                            data.notes.forEach(note => {
+                                const dismissedNotes = JSON.parse(localStorage.getItem('dismissed_notes') || '[]');
+                                if (!dismissedNotes.includes(note.id)) {
+                                    if (!document.getElementById(`popup-note-${note.id}`)) {
+                                        const noteDiv = document.createElement('div');
+                                        noteDiv.id = `popup-note-${note.id}`;
+                                        noteDiv.className = "pointer-events-auto p-4 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-2xl rounded-2xl flex flex-col gap-2 transition-all duration-300 transform translate-y-0 opacity-100";
+                                        noteDiv.innerHTML = `
+                                            <div class="flex justify-between items-start">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                                    <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Catatan Manager</span>
+                                                </div>
+                                                <button onclick="dismissNote(${note.id})" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                                </button>
+                                            </div>
+                                            <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-100">${note.isi}</p>
+                                            <span class="text-[9px] text-zinc-400 text-right self-end">Pukul ${note.waktu} oleh ${note.pembuat}</span>
+                                        `;
+                                        notesContainer.appendChild(noteDiv);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Heartbeat error", error);
+            }
+        }
+
+        function dismissNote(id) {
+            const dismissedNotes = JSON.parse(localStorage.getItem('dismissed_notes') || '[]');
+            if (!dismissedNotes.includes(id)) {
+                dismissedNotes.push(id);
+                localStorage.setItem('dismissed_notes', JSON.stringify(dismissedNotes));
+            }
+            
+            const noteEl = document.getElementById(`popup-note-${id}`);
+            if (noteEl) {
+                noteEl.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => noteEl.remove(), 300);
+            }
+        }
+
+        if (currentUser) {
+            runHeartbeat();
+            setInterval(runHeartbeat, 5000);
         }
     </script>
 </body>

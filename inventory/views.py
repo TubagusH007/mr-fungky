@@ -1,12 +1,16 @@
 import re
 import os
+import json
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction, DatabaseError
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.conf import settings
-from .models import BahanBaku, RiwayatStok, DataHistorisHarian, BarangMasuk
+from django.utils import timezone
+from .models import BahanBaku, RiwayatStok, DataHistorisHarian, BarangMasuk, Profile, LoginHistory, CatatanManager
 from gtts import gTTS
 from django.http import HttpResponse
 from datetime import datetime
@@ -28,16 +32,27 @@ def home(request):
     menipis_bahan = [b for b in semua_bahan if b.stok_sekarang <= b.stok_minimal and b.kategori_zona in ['BAHAN_BAKU', 'DAIRY']]
     menipis_topping = [b for b in semua_bahan if b.stok_sekarang <= b.stok_minimal and b.kategori_zona == 'TOPPING']
     
-    return render(request, 'inventory/index.html', {
+    context = {
         'history': history,
         'menipis_teh': menipis_teh,
         'menipis_bahan': menipis_bahan,
         'menipis_topping': menipis_topping,
         'total_menipis': len(menipis_teh) + len(menipis_bahan) + len(menipis_topping)
-    })
+    }
+    
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    if profile.role == 'MANAGER':
+        context['riwayat_login'] = LoginHistory.objects.all().order_by('-waktu')[:10]
+        context['catatan_manager'] = CatatanManager.objects.all().order_by('-waktu')[:10]
+        
+    return render(request, 'inventory/index.html', context)
 
 @login_required
 def hapus_riwayat(request, log_id):
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.role == 'MANAGER':
+        return JsonResponse({'status': 'gagal', 'pesan': 'Akses ditolak: Manager tidak dapat menghapus riwayat.'})
+        
     if request.method == 'POST':
         try:
             riwayat = RiwayatStok.objects.get(id=log_id)
@@ -50,6 +65,10 @@ def hapus_riwayat(request, log_id):
 # 2. Otak Parser Suara (Fuzzy Matching untuk Nama Panjang)
 @login_required
 def proses_suara_massal(request):
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.role == 'MANAGER':
+        return JsonResponse({'status': 'gagal', 'pesan': 'Akses ditolak: Manager tidak dapat memodifikasi stok.'})
+        
     teks_input = request.GET.get('pesan', '').lower().strip()
     # Urutkan berdasarkan panjang nama (descending) agar nama yang lebih spesifik dicek duluan
     daftar_bahan = sorted(BahanBaku.objects.all(), key=lambda x: len(x.nama_bahan), reverse=True)
@@ -76,10 +95,20 @@ def proses_suara_massal(request):
     segmen_input = re.split(pattern_pemisah, teks_input)
     
     hasil_update = []
+    last_action = 'set'
     
     # Kita looping setiap segmen hasil pemisahan
     for segmen in segmen_input:
         current_segmen = segmen.strip()
+        if not current_segmen:
+            continue
+            
+        if any(kata in current_segmen for kata in ['tambah', 'masuk', 'restok', 'plus']):
+            last_action = 'tambah'
+        elif any(kata in current_segmen for kata in ['terpakai', 'kurang', 'minus', 'keluar', 'dipakai']):
+            last_action = 'kurang'
+        elif any(kata in current_segmen for kata in ['sisa', 'jadi', 'menjadi']):
+            last_action = 'set'
         if not current_segmen:
             continue
             
@@ -105,7 +134,7 @@ def proses_suara_massal(request):
                     angka_final = angka_raw
                     
                     # Logika khusus Gula Cair dengan satuan Drigen (1 Drigen = 10.000 ml)
-                    info_unit = ""
+                    info_unit = f" {bahan.satuan}"
                     if 'drigen' in current_segmen and 'gula cair' in nama_db:
                         angka_final = angka_raw * 10000
                         info_unit = f" ({int(angka_raw)} drigen)"
@@ -115,10 +144,13 @@ def proses_suara_massal(request):
                         angka_final = angka_raw * 25
                         info_unit = f" ({int(angka_raw)} sak)"
                     
-                    # Deteksi apakah penambahan stok atau set ulang
-                    if any(kata in current_segmen for kata in ['tambah', 'masuk', 'restok', 'plus']):
+                    # Terapkan berdasarkan last_action (tambah, kurang, atau set)
+                    if last_action == 'tambah':
                         stok_akhir = bahan.stok_sekarang + angka_final
                         hasil_update.append(f"{bahan.nama_bahan} ditambah {int(angka_final)}{info_unit}")
+                    elif last_action == 'kurang':
+                        stok_akhir = max(0, bahan.stok_sekarang - angka_final)
+                        hasil_update.append(f"{bahan.nama_bahan} dikurangi {int(angka_final)}{info_unit} sisa {int(stok_akhir)}")
                     else:
                         stok_akhir = angka_final
                         hasil_update.append(f"{bahan.nama_bahan} sisa {int(angka_final)}{info_unit}")
@@ -197,6 +229,10 @@ def halaman_prediksi(request):
 
 @login_required
 def simpan_data_historis(request):
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.role == 'MANAGER':
+        return JsonResponse({'status': 'gagal', 'pesan': 'Akses ditolak: Manager tidak dapat memodifikasi data historis.'})
+        
     if request.method == 'POST':
         try:
             DataHistorisHarian.objects.create(
@@ -298,7 +334,8 @@ def simpan_barang_masuk(request):
                 bahan=bahan,
                 jumlah=jumlah_float,
                 penerima=penerima,
-                zona=bahan.get_kategori_zona_display()
+                zona=bahan.get_kategori_zona_display(),
+                penginput=request.user
             )
             
             # Juga catat di RiwayatStok umum
@@ -316,6 +353,10 @@ def simpan_barang_masuk(request):
 
 @login_required
 def update_stok_manual(request):
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.role == 'MANAGER':
+        return JsonResponse({'status': 'gagal', 'pesan': 'Akses ditolak: Manager tidak dapat memodifikasi stok.'})
+        
     if request.method == 'POST':
         bahan_id = request.POST.get('bahan_id')
         stok_baru = request.POST.get('stok_baru')
@@ -361,6 +402,10 @@ def update_stok_manual(request):
 
 @login_required
 def terapkan_prediksi_stok(request):
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.role == 'MANAGER':
+        return JsonResponse({'status': 'gagal', 'pesan': 'Akses ditolak: Manager tidak dapat melakukan pemotongan stok prediksi.'})
+        
     if request.method == 'POST':
         try:
             target_antrian = int(request.POST.get('antrian', 0))
@@ -452,10 +497,18 @@ def halaman_login(request):
     if request.method == 'POST':
         u = request.POST.get('username')
         p = request.POST.get('password')
+        role = request.POST.get('role', 'KARYAWAN')
         user = authenticate(request, username=u, password=p)
         if user is not None:
-            login(request, user)
-            return redirect('/')
+            profile, created = Profile.objects.get_or_create(user=user, defaults={'role': 'KARYAWAN'})
+            if not user.is_superuser and profile.role != role:
+                role_display = "Manager" if role == 'MANAGER' else "Karyawan"
+                profile_role_display = "Manager" if profile.role == 'MANAGER' else "Karyawan"
+                pesan_error = f"Akun Anda terdaftar sebagai {profile_role_display}, silakan gunakan login {role_display}!"
+            else:
+                login(request, user)
+                LoginHistory.objects.create(user=user)
+                return redirect('/')
         else:
             pesan_error = "Username atau password salah!"
             
@@ -470,6 +523,7 @@ def halaman_register(request):
         u = request.POST.get('username')
         p1 = request.POST.get('password')
         p2 = request.POST.get('confirm_password')
+        role = request.POST.get('role', 'KARYAWAN')
         
         if p1 != p2:
             pesan_error = "Password tidak cocok!"
@@ -477,7 +531,9 @@ def halaman_register(request):
             pesan_error = "Username sudah terdaftar!"
         else:
             user = User.objects.create_user(username=u, password=p1)
+            Profile.objects.create(user=user, role=role)
             login(request, user)
+            LoginHistory.objects.create(user=user)
             return redirect('/')
             
     return render(request, 'inventory/register.html', {'error': pesan_error})
@@ -548,3 +604,169 @@ def download_excel_stok(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
+
+# ==============================================================================
+# NATIVE REST API ENDPOINT: VOICE COMMAND INVENTORY MANAGER
+# ==============================================================================
+@csrf_exempt
+def api_voice_command(request):
+    if request.method != 'POST':
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Metode HTTP tidak diizinkan. Gunakan POST.'
+        }, status=405)
+    
+    try:
+        body = request.body.decode('utf-8')
+        data = json.loads(body)
+        
+        command_text = data.get('command_text', '').lower().strip()
+        petugas_id = data.get('petugas_id')
+        
+        if not command_text or not petugas_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Parameter command_text dan petugas_id wajib diisi.'
+            }, status=400)
+            
+        match = re.match(r'(tambah|kurang|pakai)\s+([a-z\s]+?)\s+(\d+)', command_text)
+        
+        if not match:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Format perintah tidak dikenali. Contoh: "tambah boba 10"'
+            }, status=400)
+            
+        aksi = match.group(1)
+        nama_bahan = match.group(2).strip()
+        jumlah = int(match.group(3))
+        
+        if jumlah <= 0:
+            return JsonResponse({'status': 'error', 'message': 'Jumlah harus lebih besar dari 0.'}, status=400)
+
+        with transaction.atomic():
+            try:
+                bahan = BahanBaku.objects.get(nama_bahan__iexact=nama_bahan)
+            except BahanBaku.DoesNotExist:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Bahan baku "{nama_bahan}" tidak ditemukan.'
+                }, status=404)
+            
+            stok_awal = bahan.stok_sekarang
+            if aksi == 'tambah':
+                stok_akhir = stok_awal + jumlah
+            elif aksi in ['kurang', 'pakai']:
+                stok_akhir = stok_awal - jumlah
+                if stok_akhir < 0:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'Stok tidak mencukupi. Stok "{nama_bahan}" saat ini {stok_awal}.'
+                    }, status=400)
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Aksi tidak valid.'}, status=400)
+            
+            bahan.stok_sekarang = stok_akhir
+            bahan.save()
+            
+            user = User.objects.get(id=petugas_id)
+            profile = getattr(user, 'profile', None)
+            if profile and profile.role == 'MANAGER':
+                return JsonResponse({'status': 'error', 'message': 'Akses ditolak: Manager tidak dapat memodifikasi stok.'}, status=403)
+                
+            RiwayatStok.objects.create(
+                bahan=bahan,
+                petugas=user,
+                jumlah_baru=stok_akhir
+            )
+            
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Berhasil. Stok {nama_bahan} sekarang adalah {stok_akhir}.',
+            'data': {
+                'nama_bahan': bahan.nama_bahan,
+                'stok_awal': stok_awal,
+                'jumlah_perubahan': jumlah,
+                'stok_akhir': stok_akhir,
+            }
+        }, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Format JSON tidak valid.'}, status=400)
+    except User.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Petugas tidak ditemukan.'}, status=404)
+    except DatabaseError:
+        return JsonResponse({'status': 'error', 'message': 'Layanan Database tidak merespons.'}, status=503)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Internal Error: {str(e)}'}, status=500)
+
+
+# ==============================================================================
+# API ENDPOINTS UNTUK PEMANTAUAN & CATATAN MANAGER
+# ==============================================================================
+
+@login_required
+def api_heartbeat(request):
+    # Update activity timestamp
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    profile.last_activity = timezone.now()
+    profile.save()
+    
+    # Deteksi apakah ada Manager lain/sama yang aktif memantau
+    # (aktif jika last_activity kurang dari 15 detik yang lalu)
+    now = timezone.now()
+    active_managers = Profile.objects.filter(
+        role='MANAGER',
+        last_activity__gte=now - timezone.timedelta(seconds=15)
+    )
+    
+    # Jika user saat ini adalah Manager, kita jangan hitung dia sendiri untuk dirinya sendiri,
+    # tetapi untuk Karyawan dia tetap dianggap aktif memantau.
+    manager_active = active_managers.exclude(user=request.user).exists() if profile.role == 'MANAGER' else active_managers.exists()
+    
+    # Ambil catatan aktif untuk Karyawan
+    notes = []
+    if profile.role == 'KARYAWAN':
+        active_notes = CatatanManager.objects.filter(aktif=True).order_by('-waktu')
+        for note in active_notes:
+            notes.append({
+                'id': note.id,
+                'isi': note.isi,
+                'waktu': note.waktu.strftime('%H:%M'),
+                'pembuat': note.dibuat_oleh.username
+            })
+            
+    return JsonResponse({
+        'status': 'sukses',
+        'manager_active': manager_active,
+        'notes': notes
+    })
+
+
+@login_required
+def tambah_catatan(request):
+    profile = getattr(request.user, 'profile', None)
+    if not profile or profile.role != 'MANAGER':
+        return JsonResponse({'status': 'gagal', 'pesan': 'Akses ditolak: Hanya Manager yang dapat membuat catatan.'})
+        
+    if request.method == 'POST':
+        isi = request.POST.get('isi', '').strip()
+        if isi:
+            CatatanManager.objects.create(isi=isi, dibuat_oleh=request.user)
+            return JsonResponse({'status': 'sukses', 'pesan': 'Catatan berhasil dikirim.'})
+        return JsonResponse({'status': 'gagal', 'pesan': 'Isi catatan tidak boleh kosong.'})
+    return JsonResponse({'status': 'gagal', 'pesan': 'Method not allowed'})
+
+
+@login_required
+def nonaktifkan_catatan(request):
+    if request.method == 'POST':
+        note_id = request.POST.get('note_id')
+        try:
+            note = CatatanManager.objects.get(id=note_id)
+            note.aktif = False
+            note.save()
+            return JsonResponse({'status': 'sukses'})
+        except CatatanManager.DoesNotExist:
+            return JsonResponse({'status': 'gagal', 'pesan': 'Catatan tidak ditemukan.'})
+    return JsonResponse({'status': 'gagal', 'pesan': 'Method not allowed'})

@@ -4,7 +4,8 @@ from inventory.views import (
     proses_suara_massal, home, halaman_prediksi, simpan_data_historis, 
     api_kalkulasi_prediksi, halaman_gudang, update_stok_manual, 
     terapkan_prediksi_stok, halaman_login, halaman_register, 
-    proses_logout, hapus_riwayat, download_excel_stok, simpan_barang_masuk
+    proses_logout, hapus_riwayat, download_excel_stok, simpan_barang_masuk,
+    api_voice_command, api_heartbeat, tambah_catatan, nonaktifkan_catatan
 )
 
 urlpatterns = [
@@ -23,5 +24,9 @@ urlpatterns = [
     path('gudang/download/', download_excel_stok, name='download_excel_stok'),
 
     path('riwayat/hapus/<int:log_id>/', hapus_riwayat, name='hapus_riwayat'),
+    path('api/voice-command/', api_voice_command, name='api_voice_command'),
+    path('api/heartbeat/', api_heartbeat, name='api_heartbeat'),
+    path('api/catatan/tambah/', tambah_catatan, name='tambah_catatan'),
+    path('api/catatan/tutup/', nonaktifkan_catatan, name='nonaktifkan_catatan'),
     path('', home, name='home'),
 ]

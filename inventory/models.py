@@ -66,9 +66,37 @@ class BarangMasuk(models.Model):
     tanggal = models.DateTimeField(auto_now_add=True)
     penerima = models.CharField(max_length=100)
     zona = models.CharField(max_length=50) # Snapshot zona saat masuk
+    penginput = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"{self.bahan.nama_bahan} - {self.jumlah} - {self.tanggal.strftime('%d/%m/%Y')}"
 
     class Meta:
         ordering = ['-tanggal']
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    role = models.CharField(max_length=10, choices=[('KARYAWAN', 'Karyawan'), ('MANAGER', 'Manager')], default='KARYAWAN')
+    last_activity = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.role}"
+
+
+class LoginHistory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='login_history')
+    waktu = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-waktu']
+
+
+class CatatanManager(models.Model):
+    isi = models.TextField()
+    dibuat_oleh = models.ForeignKey(User, on_delete=models.CASCADE)
+    waktu = models.DateTimeField(auto_now_add=True)
+    aktif = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-waktu']
