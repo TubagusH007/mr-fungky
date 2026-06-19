@@ -202,40 +202,8 @@
 
         {% if request.user.profile.role == 'MANAGER' %}
         <!-- Section Khusus Manager -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12 animate-fade-in">
-            <!-- Catatan Peringatan Manager -->
-            <div class="card p-6 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm">
-                <h3 class="text-base font-bold mb-4 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                    Kirim Peringatan/Notes ke Karyawan
-                </h3>
-                <form id="form-tambah-catatan" onsubmit="kirimCatatan(event)" class="space-y-3">
-                    {% csrf_token %}
-                    <textarea name="isi" required rows="3" placeholder="Tulis catatan (contoh: jangan lupa gula yang kemarin sisa 3)..." class="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-zinc-50 dark:bg-zinc-900 focus:ring-2 focus:ring-primary outline-none transition-all text-sm"></textarea>
-                    <button type="submit" class="w-full bg-primary hover:bg-primary_hover text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-primary/20">Kirim Catatan</button>
-                </form>
-                
-                <div class="mt-6 border-t border-zinc-100 dark:border-zinc-700 pt-4">
-                    <h4 class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3">Daftar Catatan Aktif</h4>
-                    <div class="space-y-2 max-h-[150px] overflow-y-auto pr-1" id="list-catatan-manager">
-                        {% for note in catatan_manager %}
-                        {% if note.aktif %}
-                        <div id="note-item-{{ note.id }}" class="flex justify-between items-start text-xs p-3 bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                            <span class="text-zinc-700 dark:text-zinc-300 pr-2 leading-relaxed">{{ note.isi }}</span>
-                            <div class="flex items-center gap-2 shrink-0">
-                                <span class="text-[10px] text-zinc-400 font-semibold">{{ note.waktu|date:"H:i" }}</span>
-                                <button onclick="dismissNote({{ note.id }})" class="text-red-500 font-semibold hover:underline">Tutup</button>
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% empty %}
-                        <p class="text-xs text-zinc-400" id="no-notes-msg">Belum ada catatan aktif.</p>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
+        <div class="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-12 animate-fade-in max-w-4xl mx-auto">
+
 
             <!-- Riwayat Login Terakhir -->
             <div class="card p-6 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm">
@@ -386,10 +354,7 @@
         </div>
     </div>
 
-    <!-- Pop-up Catatan Karyawan -->
-    <div id="notes-popup-container" class="fixed bottom-6 right-6 z-[100] max-w-sm w-full space-y-3 pointer-events-none">
-        <!-- Catatan diisi via JS -->
-    </div>
+
 
     <!-- Banner Pemantauan (Floating Indicator) -->
     <div id="monitoring-banner" class="fixed bottom-6 left-6 z-[90] hidden">
@@ -517,121 +482,12 @@
                         } else {
                             monitorBanner.classList.add('hidden');
                         }
-                    }
-                    
-                    // Show notes pop-up to Employee
-                    if (userRole === 'KARYAWAN' && data.notes.length > 0) {
-                        const notesContainer = document.getElementById('notes-popup-container');
-                        if (notesContainer) {
-                            data.notes.forEach(note => {
-                                let dismissedNotes = [];
-                                try {
-                                    dismissedNotes = JSON.parse(localStorage.getItem('dismissed_notes') || '[]');
-                                } catch (e) {
-                                    dismissedNotes = [];
-                                }
-                                if (!dismissedNotes.includes(note.id)) {
-                                    if (!document.getElementById(`popup-note-${note.id}`)) {
-                                        const noteDiv = document.createElement('div');
-                                        noteDiv.id = `popup-note-${note.id}`;
-                                        noteDiv.className = "pointer-events-auto p-4 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-2xl rounded-2xl flex flex-col gap-2 transition-all duration-300 transform translate-y-0 opacity-100";
-                                        noteDiv.innerHTML = `
-                                            <div class="flex justify-between items-start">
-                                                <div class="flex items-center gap-2">
-                                                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                                                    <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Catatan Manager</span>
-                                                </div>
-                                                <button onclick="dismissNote(${note.id})" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                                </button>
-                                            </div>
-                                            <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-100">${note.isi}</p>
-                                            <span class="text-[9px] text-zinc-400 text-right self-end">Pukul ${note.waktu} oleh ${note.pembuat}</span>
-                                        `;
-                                        notesContainer.appendChild(noteDiv);
-                                    }
-                                }
-                            });
-                        }
-                    }
+                    // Show notes pop-up to Employee removed per user request
                 }
             } catch (error) {
                 console.error("Heartbeat error", error);
             }
         }
-
-        function dismissNoteForEmployee(id) {
-            let dismissedNotes = [];
-            try {
-                dismissedNotes = JSON.parse(localStorage.getItem('dismissed_notes') || '[]');
-            } catch (e) {
-                dismissedNotes = [];
-            }
-            if (!dismissedNotes.includes(id)) {
-                dismissedNotes.push(id);
-                localStorage.setItem('dismissed_notes', JSON.stringify(dismissedNotes));
-            }
-            
-            const noteEl = document.getElementById(`popup-note-${id}`);
-            if (noteEl) {
-                noteEl.classList.add('opacity-0', 'translate-y-2');
-                setTimeout(() => noteEl.remove(), 300);
-            }
-        }
-
-        // Functions for Manager Notes panel
-        function kirimCatatan(event) {
-            event.preventDefault();
-            const form = event.target;
-            const formData = new FormData(form);
-
-            fetch('/api/catatan/tambah/', {
-                method: 'POST',
-                body: formData,
-                headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.status === 'sukses') {
-                    alert(data.pesan);
-                    location.reload();
-                } else {
-                    alert(data.pesan);
-                }
-            });
-        }
-
-        function dismissNoteFromManagerPanel(id) {
-            if (!confirm("Tutup catatan ini?")) return;
-            fetch('/api/catatan/tutup/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: `note_id=${id}`
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.status === 'sukses') {
-                    const item = document.getElementById(`note-item-${id}`);
-                    if (item) item.remove();
-                    
-                    const list = document.getElementById('list-catatan-manager');
-                    if (list && list.children.length === 0) {
-                        list.innerHTML = '<p class="text-xs text-zinc-400" id="no-notes-msg">Belum ada catatan aktif.</p>';
-                    }
-                }
-            });
-        }
-
-        window.dismissNote = function(id) {
-            if (userRole === 'MANAGER') {
-                dismissNoteFromManagerPanel(id);
-            } else {
-                dismissNoteForEmployee(id);
-            }
-        };
 
         if (currentUser) {
             runHeartbeat();
